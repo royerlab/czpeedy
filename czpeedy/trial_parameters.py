@@ -16,7 +16,7 @@ class TrialParameters:
     # This is an instance method and not a class method because the name actually varies
     # depending on the driver (i.e. zarr vs zarr3 vs N5...) and endianneess. Currently
     # only supports zarr, but in the future we should support more.
-    def name_for_data_type(self, type: np.uint8 | np.uint16) -> str:
+    def name_for_data_type(self, type) -> str:
         return "<u2"
 
     def to_spec(self, output_path: Path, data: np.ndarray) -> dict:
@@ -24,7 +24,7 @@ class TrialParameters:
             'driver': 'zarr',
             'kvstore': {
                 'driver': 'file',
-                'path': output_path,
+                'path': str(output_path.absolute()),
             },
 
             'metadata': {
@@ -34,13 +34,12 @@ class TrialParameters:
                     'shuffle': 1,
                     'clevel': self.clevel
                 },
-                'dtype': '<u2',
+                'dtype': self.name_for_data_type(data),
                 'shape': data.shape,
                 "chunks": [482, 480, 2048],
             },
             'create': True,
             'delete_existing': True,
-            'dtype': self.name_for_data_type(data)
         }
 
     def all_combinations(clevels: Iterable[int] = [2, 4, 6, 8], compressors: Iterable[str] = ["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]) -> Iterator[TrialParameters]:

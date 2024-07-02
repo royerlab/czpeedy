@@ -6,7 +6,8 @@ import numpy as np
 import colorama
 from termcolor import colored
 
-from czpeedy.trial_iterator import TrialParameters
+from czpeedy.trial_parameters import TrialParameters
+from czpeedy.runner import Runner
 
 def dir_or_nonexistent(path: str) -> Path:
     if os.path.isfile(path):
@@ -29,8 +30,10 @@ def main() -> None:
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         args.dest.mkdir(parents=True, exist_ok=True)
-        for trial_parameters in TrialParameters.all_combinations():
-            print(trial_parameters.to_spec(args.dest, np.zeros((1920, 1440, 2048), np.uint16)))
+        trial_parameters = TrialParameters.all_combinations()
+        data = np.zeros((1920, 1440, 2048), np.uint16)
+        runner = Runner(trial_parameters, data, args.dest)
+        runner.run_all()
     else:
         print("Read testing is not yet supported")
 
