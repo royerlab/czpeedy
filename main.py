@@ -2,6 +2,7 @@ import argparse
 import os
 from pathlib import Path
 
+import numpy as np
 import colorama
 from termcolor import colored
 
@@ -29,7 +30,7 @@ def main() -> None:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         args.dest.mkdir(parents=True, exist_ok=True)
         for trial_parameters in TrialParameters.all_combinations():
-            print(trial_parameters)
+            print(trial_parameters.to_spec(args.dest, np.zeros((1920, 1440, 2048), np.uint16)))
     else:
         print("Read testing is not yet supported")
 
