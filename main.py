@@ -66,12 +66,13 @@ def main() -> None:
     parser.add_argument("--savecsv", type=filepath, help="The destination to save test results to in csv format. Will overwrite the named file if it exists already.")
     args = parser.parse_args()
 
+
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         data = load_input(args.source, args.shape, args.dtype)
-        trial_parameters = TrialParameters.all_combinations(data.shape, data.dtype)
+        trial_parameters, batch_count = TrialParameters.all_combinations(data.shape, data.dtype)
         args.dest.mkdir(parents=True, exist_ok=True)
-        runner = Runner(trial_parameters, data, args.dest, args.repetitions)
+        runner = Runner(trial_parameters, data, args.dest, args.repetitions, batch_count)
         try:
             runner.run_all()
         except KeyboardInterrupt:

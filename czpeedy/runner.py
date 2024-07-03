@@ -10,16 +10,19 @@ from termcolor import colored
 from .trial_parameters import TrialParameters
 
 class Runner:
-    results: dict[TrialParameters, list[float]]
+    trial_params: Iterable[TrialParameters]
     data: np.ndarray
     dest: Path
     repetitions: int
+    batch_count: int
+    results: dict[TrialParameters, list[float]]
 
-    def __init__(self, trial_params: Iterable[TrialParameters], data: np.ndarray, dest: Path, repetitions: int):
+    def __init__(self, trial_params: Iterable[TrialParameters], data: np.ndarray, dest: Path, repetitions: int, batch_count: int | None = None):
         self.trial_params = trial_params
         self.data = data
         self.dest = dest
         self.repetitions = repetitions
+        self.batch_count = batch_count
         self.results = {}
     
     def time_execution(self, dataset) -> float:
@@ -31,8 +34,10 @@ class Runner:
     def run_all(self):
         is_first_loop = True
         best_time = None
+        # Ensure there is always enough justification to fit "Test x/x" when x = self.repetitions
+        rjust_level = 10 + 2 * (int(np.log10(self.repetitions)) + 1)
 
-        for trial_param in self.trial_params:
+        for (batch_id, trial_param) in enumerate(self.trial_params):
             result = []
             spec = trial_param.to_spec(self.dest)
             dataset = ts.open(spec).result()
@@ -42,15 +47,17 @@ class Runner:
                 self.time_execution(dataset)
                 is_first_loop = False
 
-            print(f"{colored("Starting Test Batch", "green")} {str(spec)}")
+            print()
+            print(f"{colored(f"Starting Test Batch {batch_id + 1}" + (f"/{self.batch_count}" if self.batch_count else ""), "green")}{f" ({100*batch_id/self.batch_count:.1f}%)" if self.batch_count else ""}")
+            print(colored(spec, "light_grey"))
             for n in range(self.repetitions):
-                print(f"\tTest {n + 1}/{self.repetitions}: ", end="")
+                print(f"Test {n + 1}/{self.repetitions}: ".rjust(rjust_level), end="")
                 elapsed = self.time_execution(dataset)
                 print(f"{elapsed:.2f}s")
                 result.append(elapsed)
             
             mean = np.mean(result)
-            print(f"\t Mean: {np.mean(result):.2f}s", end="")
+            print("Mean: ".rjust(rjust_level) + f"{np.mean(result):.2f}s", end="")
 
             if best_time is not None and mean < best_time:
                 print(colored(" (Fastest yet 🏆)", "yellow"))
