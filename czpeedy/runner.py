@@ -1,6 +1,7 @@
 from typing import Iterable
 from pathlib import Path
 import time
+import csv
 
 import numpy as np
 import tensorstore as ts
@@ -72,5 +73,21 @@ class Runner:
             
             print()
             print(colored("🥇" if i == 0 else f"#{i + 1}", "green"), end="")
-            print(f"\tMean Runtime: {mean_time:.2f}s " + (f"(σ={int(1000*stddev)}ms)" if self.repetitions > 1 else ""))
+            print(f": Mean Runtime: {mean_time:.2f}s " + (f"(σ={int(1000*stddev)}ms)" if self.repetitions > 1 else ""))
             print(spec)
+    
+    def save_results_csv(self, path: Path):
+        with open(path, "wt") as fp:
+            writer = csv.writer(fp, delimiter=",")
+
+            # Write the header
+            writer.writerow(["mean write time (s)", "write std.dev (s)", "dtype", "clevel", "compressor", "spec json"])
+            for trial_param, timings in self.results.items():
+                writer.writerow([
+                    f"{np.mean(timings):.2f}",
+                    f"{np.std(timings):.2f}",
+                    trial_param.dtype_json(),
+                    trial_param.clevel,
+                    trial_param.compressor,
+                    trial_param.to_spec(self.dest)
+                ])

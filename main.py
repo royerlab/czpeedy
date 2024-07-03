@@ -50,6 +50,12 @@ def numpy_dtype(text: str) -> np.dtype:
     except TypeError:
         raise argparse.ArgumentTypeError(f"Provided dtype string \"{text}\" is not a valid numpy data type.")
 
+def filepath(text: str) -> Path:
+    try:
+        return Path(text)
+    except:
+        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a filepath.")
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=dir_or_file, help="The input dataset used in benchmarking. If write benchmarking, this is the data that will be written to disk.")
@@ -57,10 +63,8 @@ def main() -> None:
     parser.add_argument("--shape", type=numpy_shape, help="If your data source is a raw numpy array dump, you must provide the shape (i.e. --shape 1920,1080,1024). Ignored if the data source has a shape in its metadata.")
     parser.add_argument("--dtype", type=numpy_dtype, help="If your data source is a raw numpy array dump, you must provide its dtype (i.e. --dtype uint32)")
     parser.add_argument("--repetitions", type=int, default=3, help="The number of times to test each configuration. This increases confidence that speeds are repeatable, but takes a while. (default: 3)")
+    parser.add_argument("--savecsv", type=filepath, help="The destination to save test results to in csv format. Will overwrite the named file if it exists already.")
     args = parser.parse_args()
-
-    # All test types need input data:
-
 
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
@@ -68,8 +72,16 @@ def main() -> None:
         trial_parameters = TrialParameters.all_combinations(data.shape, data.dtype)
         args.dest.mkdir(parents=True, exist_ok=True)
         runner = Runner(trial_parameters, data, args.dest, args.repetitions)
-        runner.run_all()
+        try:
+            runner.run_all()
+        except KeyboardInterrupt:
+            print(colored("Ctrl-C detected - Printing partial results and terminating.", "black", "on_red"))
+        print(colored("Fastest Specs:", "green"))
+
         runner.print_results()
+        if args.savecsv:
+            print(f"{colored("Saving results", "green")} as {args.savecsv}")
+            runner.save_results_csv(args.savecsv)
     else:
         print("Read testing is not yet supported")
 
