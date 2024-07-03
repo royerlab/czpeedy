@@ -66,7 +66,6 @@ def main() -> None:
     parser.add_argument("--savecsv", type=filepath, help="The destination to save test results to in csv format. Will overwrite the named file if it exists already.")
     args = parser.parse_args()
 
-
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         data = load_input(args.source, args.shape, args.dtype)
@@ -76,7 +75,7 @@ def main() -> None:
         try:
             runner.run_all()
         except KeyboardInterrupt:
-            print(colored("Ctrl-C detected - Printing partial results and terminating.", "black", "on_red"))
+            print(colored("\nCtrl-C detected mid-test - Printing partial results and terminating.", "black", "on_red"))
         print(colored("Fastest Specs:", "green"))
 
         runner.print_results()

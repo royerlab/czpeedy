@@ -61,8 +61,8 @@ class TrialParameters:
     def all_combinations(
             shape: ArrayLike[int],
             dtype: np.dtype,
-            clevels: Iterable[int] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
-            compressors: Iterable[str] = ALL_COMPRESSORS,
+            clevels: Iterable[int] = [1, 2, 3, 5],
+            compressors: Iterable[str] = ["blosclz", "lz4", "snappy", "zlib", "zstd"],
             shuffles: Iterable[int] = [0, 1, 2],
             chunk_sizes: Iterable[ArrayLike[int]] = None,
             endiannesses: Iterable[int] = [-1, 1]) -> Iterator[TrialParameters]:
@@ -153,7 +153,7 @@ class TrialParameters:
         chunks_with_volumes = map(lambda chunk: (chunk, np.prod(chunk)), chunks)
         chunks_with_volumes = sorted(chunks_with_volumes, key=lambda item: item[1])
         
-        factor = 1.5
+        factor = 2.5
         smallest_chunk, volume_to_beat = chunks_with_volumes[0]
         suggested_chunks = [smallest_chunk]
         volume_to_beat *= factor
@@ -162,6 +162,12 @@ class TrialParameters:
             if volume > volume_to_beat:
                 suggested_chunks.append(chunk)
                 volume_to_beat = volume * factor
+        
+        # We always want to suggest using the minimum and maximum chunk sizes, as those
+        # are the extremes of the sequential write performance spectrum.
+        shape = list(shape)
+        if shape not in suggested_chunks:
+            suggested_chunks.append(shape)
         
         # Test to see the % of wasted space that the suggested chunks create. In my testing
         # this is always less than 2% of the size of the data
