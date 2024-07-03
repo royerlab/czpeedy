@@ -9,18 +9,24 @@ from termcolor import colored
 from czpeedy.trial_parameters import TrialParameters
 from czpeedy.runner import Runner
 
+# An argument type for argparse that ensures the argument is a valid directory or a directory that could be created.
+# Used to specify the output folder.
 def dir_or_nonexistent(path: str) -> Path:
     if os.path.isfile(path):
         raise argparse.ArgumentTypeError(f"{path} is a file, not a directory.")
     
     return Path(path)
-    
+
+# An argument type for argparse that ensures the argument is an existent directory or file.
+# Used to ensure that the input source exists.
 def dir_or_file(path: str) -> Path:
     if os.path.exists(path):
         return Path(path)
     else:
         raise argparse.ArgumentTypeError(f"{path} does not exist in the filesystem.")
 
+# An argument type for argparse that ensures the argument is a valid shape for a numpy array (i.e. of form "a,b,c,d,..." where abcd are integers)
+# Used to specify the input shape if needed.
 def numpy_shape(text: str) -> list[int]:
     axes = text.split(',')
     out = []
@@ -31,6 +37,21 @@ def numpy_shape(text: str) -> list[int]:
     except ValueError:
         raise argparse.ArgumentTypeError(f"`{text}` is not a comma-delimited list of integers.")
 
+# An argument type for argparse that ensures the argument is a valid numpy array data type.
+def numpy_dtype(text: str) -> np.dtype:
+    try:
+        return np.dtype(text)
+    except TypeError:
+        raise argparse.ArgumentTypeError(f"Provided dtype string \"{text}\" is not a valid numpy data type.")
+
+def filepath(text: str) -> Path:
+    try:
+        return Path(text)
+    except:
+        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a filepath.")
+
+# Takes all the information that the user provided about the input source and attempts to load it into a numpy array.
+# Currently, only raw numpy data files are supported.
 def load_input(source: Path, shape: list[int] | None = None, dtype: np.dtype | None = None) -> np.ndarray:
     if source.is_file:
         # Raw numpy data dump (or known type):
@@ -44,18 +65,7 @@ def load_input(source: Path, shape: list[int] | None = None, dtype: np.dtype | N
     else:
         raise NotImplementedError("Loading from zarr is not yet supported.")
 
-def numpy_dtype(text: str) -> np.dtype:
-    try:
-        return np.dtype(text)
-    except TypeError:
-        raise argparse.ArgumentTypeError(f"Provided dtype string \"{text}\" is not a valid numpy data type.")
-
-def filepath(text: str) -> Path:
-    try:
-        return Path(text)
-    except:
-        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a filepath.")
-
+# Runs the main CLI. Currently, only write testing is implemented.
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=dir_or_file, help="The input dataset used in benchmarking. If write benchmarking, this is the data that will be written to disk.")

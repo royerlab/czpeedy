@@ -8,8 +8,9 @@ import tensorstore as ts
 
 ALL_COMPRESSORS = ["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]
 
+# A more user-friendly API around tensorstore's `spec` concept (which is usually just json - see `TrialParameters#to_spec`.)
+# Contains class methods for utilities related to creating large numbers of trial parameter sets.
 class TrialParameters:
-
     shape: ArrayLike[int]
     dtype: np.dtype
     clevel: int
@@ -18,6 +19,8 @@ class TrialParameters:
     chunk_size: list[int]
     endianness: int
 
+    # All parameters are either obvious or can be referenced in tensorstore's spec documentation, with the exception of `endianness`.
+    # `endianness` is -1 for little endian, 0 for indeterminate endianness (only applies for 1 byte values), and +1 for big endian.
     def __init__(self, shape: ArrayLike[int], dtype: np.dtype, *, clevel: int, compressor: str, shuffle: int, chunk_size: ArrayLike[int], endianness: int):
         self.shape = shape
         self.dtype = dtype
@@ -30,10 +33,16 @@ class TrialParameters:
     # The name actually varies
     # depending on the driver (i.e. zarr vs zarr3 vs N5...) and endianneess. Currently
     # only supports zarr, but in the future we should support more.
+
+    # Returns a zarr v2 dtype string based on the numpy data type of this `TrialParameters`. 
+    # Refernce: https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#data-type-encoding
+    # TODO: This only supports uint16 right now!
     def dtype_json(self) -> str:
         endianness_char = ('|', '>', '<')[self.endianness]
         return endianness_char + "u2"
 
+    # Produces a jsonable dict that communicates all the trial parameters to tensorstore.
+    # Usage: `ts.open(trial_parameters.to_spec()).result()`
     def to_spec(self, output_path: Path) -> dict:
         return {
             'driver': 'zarr',
@@ -57,7 +66,18 @@ class TrialParameters:
             'delete_existing': True,
         }
 
-    # def all_combinations(shape: ArrayLike[int], dtype: np.dtype, clevels: Iterable[int] = [2, 4, 6, 8], compressors: Iterable[str] = ["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]) -> Iterator[TrialParameters]:
+    # Returns:
+    # 1. An iterator that steps over every possible set of trial parameters given allowable values for
+    #    each parameter (i.e. the cartesian product of all parameters)
+    # 2. The number of `TrialParameters` instances that the iterator will produce (i.e. len(list(iterator))).
+    #    This is useful because the iterator can in theory be massive and there is no need to convert it to
+    #    a list if you're just iterating over it.
+    # All parameters are mandatory (but have default values) except `chunk_sizes`. If `chunk_sizes` is `None`,
+    # `TrialParameters.suggest_chunk_sizes` will be used to suggest sensible chunk sizes (the actual number
+    # of suggestions and what they are depends on the `shape`).
+    # The default values of all arguments are chosen to cover a reasonable test range without performing too
+    # many tests (although it is still quite a few!).
+    # Raises ValueError if any parameters are out of bounds.
     def all_combinations(
             shape: ArrayLike[int],
             dtype: np.dtype,
@@ -65,7 +85,7 @@ class TrialParameters:
             compressors: Iterable[str] = ["blosclz", "lz4", "snappy", "zlib", "zstd"],
             shuffles: Iterable[int] = [0, 1, 2],
             chunk_sizes: Iterable[ArrayLike[int]] = None,
-            endiannesses: Iterable[int] = [-1, 1]) -> Iterator[TrialParameters]:
+            endiannesses: Iterable[int] = [-1, 1]) -> tuple[Iterator[TrialParameters], int]:
         
         if chunk_sizes is None:
             chunk_sizes = TrialParameters.suggest_chunk_sizes(shape)
@@ -109,6 +129,8 @@ class TrialParameters:
         # and the spacing ensures that there won't be any crazy wasted space (i.e. if the axis is size 100
         # and the chunk is size 99, you need two chunks of size 99 to cover it. huge waste. But this 
         # method ensures the axis size is always quite close to (i.e. just beneath) a multiple of the chunk).
+        # (Note: in the implementation below we don't use all of the quotients - just ones that are sufficiently
+        # spaced. i.e. not all x in [1, n] are used if their recipocals are close)
         #
         # Repeating this for each axis, you can sensibly combine any set of chunk lengths and produce
         # a usable chunk. But the set of all possible combinations is large and not very enlightening.

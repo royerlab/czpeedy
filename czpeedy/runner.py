@@ -9,6 +9,8 @@ from termcolor import colored
 
 from .trial_parameters import TrialParameters
 
+# Test runner class that performs a write speed measurement of some number of `TrialParameters` (provided by an iterable).
+# Pretty-prints output while running, reports the best parameters, and can save data to file.
 class Runner:
     trial_params: Iterable[TrialParameters]
     data: np.ndarray
@@ -25,12 +27,16 @@ class Runner:
         self.batch_count = batch_count
         self.results = {}
     
+    # Given a tensorstore dataset object (i.e. the result of ts.open(spec).result()),
+    # performs a write test and returns the duration in seconds.
     def time_execution(self, dataset) -> float:
         now = time.time()
         dataset.write(self.data).result()
         elapsed = time.time() - now
         return elapsed
 
+    # Runs a number of repeat tests for every instance of trial_parameters (referred to as a "batch"),
+    # pretty-prints results while doing so, and collects all the data in the results dict.
     def run_all(self):
         is_first_loop = True
         best_time = None
@@ -73,6 +79,8 @@ class Runner:
     def print_results(self, topn=3):
         sorted_results = sorted(self.results.items(), key=lambda item: np.mean(item[1]))
 
+        # Print the topn results in ascending order so that the user sees the #1 spec
+        # at the bottom of the terminal output
         for i, (trial_param, timings) in reversed(list(enumerate(sorted_results[:topn]))):
             mean_time = np.mean(timings)
             stddev = np.std(timings)
