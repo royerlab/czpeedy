@@ -96,7 +96,7 @@ class Runner:
             writer = csv.writer(fp, delimiter=",")
 
             # Write the header
-            writer.writerow(["mean write time (s)", "write std.dev (s)", "dtype", "clevel", "compressor", "spec json"])
+            writer.writerow(["mean write time (s)", "write std.dev (s)", "dtype", "clevel", "compressor", "shuffle", "chunk size", "endianness", "spec json"])
             for trial_param, timings in self.results.items():
                 writer.writerow([
                     f"{np.mean(timings):.2f}",
@@ -104,5 +104,8 @@ class Runner:
                     trial_param.dtype_json(),
                     trial_param.clevel,
                     trial_param.compressor,
+                    trial_param.shuffle,
+                    ','.join(str(ax) for ax in trial_param.chunk_size),
+                    trial_param.endianness,
                     trial_param.to_spec(self.dest)
                 ])
