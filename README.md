@@ -10,4 +10,4 @@ to disk using each possible combination of those parameters (which can easily be
 standard deviation, and fastest settings will be reported.
 
 ## Screenshots
-![images/term_screenshot.png](A screenshot of the terminal output created by `czpeedy`.)
+![https://github.com/royerlab/czpeedy/blob/main/images/term_screenshot.png?raw=true](A screenshot of the terminal output created by `czpeedy`.)
