@@ -1,3 +1,8 @@
+<p align="center">
+  <img src="https://raw.githubusercontent.com/royerlab/czpeedy/main/images/logo.png" width="300" alt="Czpeedy logo">
+</p>
+
+
 # czpeedy - `tensorstore` profiling tool
 `czpeedy` (pronounced 'speedy') is a command-line tool used to determine the [`tensorstore`](https://github.com/google/tensorstore/) settings
 (called a 'spec') which yield the fastest write speed on a given machine. For example, on some systems, it is faster
