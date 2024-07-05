@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/royerlab/czpeedy/main/images/logo.png" width="300" alt="Czpeedy logo">
+  <img src="https://github.com/royerlab/czpeedy/raw/main/images/logo.png" width="150" alt="Czpeedy logo">
 </p>
 
 
