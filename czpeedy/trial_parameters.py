@@ -7,6 +7,8 @@ from numpy.typing import ArrayLike
 import tensorstore as ts
 
 ALL_COMPRESSORS = ["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]
+SHUFFLE_TYPES = {"auto": -1, "none": 0, "byte": 1, "bit": 2}
+ENDIANNESSES = {"big": 1, "auto": 0, "little": -1}
 
 # A more user-friendly API around tensorstore's `spec` concept (which is usually just json - see `TrialParameters#to_spec`.)
 # Contains class methods for utilities related to creating large numbers of trial parameter sets.
@@ -190,6 +192,9 @@ class TrialParameters:
         shape = list(shape)
         if shape not in suggested_chunks:
             suggested_chunks.append(shape)
+
+        max_volume = 2 ** 31 - 17
+        suggested_chunks = list(filter(lambda chunk: np.prod(chunk) < max_volume, suggested_chunks))
         
         # Test to see the % of wasted space that the suggested chunks create. In my testing
         # this is always less than 2% of the size of the data

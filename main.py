@@ -1,12 +1,13 @@
 import argparse
 import os
 from pathlib import Path
+from typing import Any, Callable, Tuple
 
 import numpy as np
 import colorama
 from termcolor import colored
 
-from czpeedy.trial_parameters import TrialParameters
+from czpeedy.trial_parameters import TrialParameters, ALL_COMPRESSORS, SHUFFLE_TYPES, ENDIANNESSES
 from czpeedy.runner import Runner
 
 # An argument type for argparse that ensures the argument is a valid directory or a directory that could be created.
@@ -27,15 +28,13 @@ def dir_or_file(path: str) -> Path:
 
 # An argument type for argparse that ensures the argument is a valid shape for a numpy array (i.e. of form "a,b,c,d,..." where abcd are integers)
 # Used to specify the input shape if needed.
-def numpy_shape(text: str) -> list[int]:
-    axes = text.split(',')
+def numpy_shape(text: str) -> Tuple[int, ...]:
+    axes = text.split('x')
     out = []
     try:
-        for ax in axes:
-            out.append(int(ax))
-        return out
+        return tuple(int(ax) for ax in axes)
     except ValueError:
-        raise argparse.ArgumentTypeError(f"`{text}` is not a comma-delimited list of integers.")
+        raise argparse.ArgumentTypeError(f"`{text}` is not an x-delimited list of integers.")
 
 # An argument type for argparse that ensures the argument is a valid numpy array data type.
 def numpy_dtype(text: str) -> np.dtype:
@@ -49,6 +48,31 @@ def filepath(text: str) -> Path:
         return Path(text)
     except:
         raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a filepath.")
+
+def endianness(text: str) -> int:
+    if text in ENDIANNESSES:
+        return ENDIANNESSES[text]
+    else:
+        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to an endianness. Valid endiannesses: {", ".join(ENDIANNESSES.keys())}")
+
+def clevel(text: str) -> int:
+    try:
+        level = int(text)
+        if level < 0 or level > 9:
+            raise ValueError()
+        return level
+    except:
+        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a compression level. A valid compression level is an integer from 0 to 9 inclusive.")
+
+def compressor(text: str) -> str:
+    if text in ALL_COMPRESSORS:
+        return text
+    raise argparse.ArgumentTypeError(f"\"{text}\" is not a valid compressor. Valid compressors: {", ".join(ALL_COMPRESSORS)}.")
+
+def shuffle_type(text: str) -> str:
+    if text in SHUFFLE_TYPES:
+        return SHUFFLE_TYPES[text]
+    raise argparse.ArgumentTypeError(f"\"{text}\" is not a valid shuffle type. Valid shuffle types: {", ".join(SHUFFLE_TYPES.keys())}")
 
 # Takes all the information that the user provided about the input source and attempts to load it into a numpy array.
 # Currently, only raw numpy data files are supported.
@@ -65,21 +89,39 @@ def load_input(source: Path, shape: list[int] | None = None, dtype: np.dtype | N
     else:
         raise NotImplementedError("Loading from zarr is not yet supported.")
 
+# Given a callable that can be used as a type in argparse (i.e. it can convert a string to a more specific type),
+# produces a wrapper that accepts a *list* of that type. i.e. if the type 'endianness' works as follows:
+# --endianness big => args.endianness = +1
+# then using the type `list_type(endianness)` produces a type with these semantics:
+# --endianness big => args.endianness = [+1]
+# --endianness big,little => args.endianness = [+1, -1]
+# This is useful for specifying a set of parameters for each given property.
+def list_type(element_type: Callable[[str], Any]) -> set[Any]:
+    def parser(text: str) -> list[Any]:
+        print({part for part in text.split(',')})
+        return {element_type(part) for part in text.split(',')}
+    return parser
+
 # Runs the main CLI. Currently, only write testing is implemented.
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("source", type=dir_or_file, help="The input dataset used in benchmarking. If write benchmarking, this is the data that will be written to disk.")
     parser.add_argument("--dest", type=dir_or_nonexistent, help="The destination where write testing will occur. A directory will be created inside, called 'czpeedy'. Each write test will delete and recreate the `czpeedy` folder.")
-    parser.add_argument("--shape", type=numpy_shape, help="If your data source is a raw numpy array dump, you must provide the shape (i.e. --shape 1920,1080,1024). Ignored if the data source has a shape in its metadata.")
-    parser.add_argument("--dtype", type=numpy_dtype, help="If your data source is a raw numpy array dump, you must provide its dtype (i.e. --dtype uint32)")
-    parser.add_argument("--repetitions", type=int, default=3, help="The number of times to test each configuration. This increases confidence that speeds are repeatable, but takes a while. (default: 3)")
     parser.add_argument("--savecsv", type=filepath, help="The destination to save test results to in csv format. Will overwrite the named file if it exists already.")
+    parser.add_argument("--repetitions", type=int, default=3, help="The number of times to test each configuration. This increases confidence that speeds are repeatable, but takes a while. (default: 3)")
+    parser.add_argument("--dtype", type=numpy_dtype, help="If your data source is a raw numpy array dump, you must provide its dtype (i.e. --dtype uint32)")
+    parser.add_argument("--shape", type=numpy_shape, help="If your data source is a raw numpy array dump, you must provide the shape (i.e. --shape 1920x1080x1024). Ignored if the data source has a shape in its metadata.")
+    parser.add_argument("--clevel", type=list_type(clevel), help="The endianness you want to write your data as (can be big, little, or none). \"none\" is only an acceptable endianness if the dtype is 1 byte.")
+    parser.add_argument("--compressor", type=list_type(compressor), help=f"The compressor id you want to use with blosc. Valid compressors: {", ".join(ALL_COMPRESSORS)}.")
+    parser.add_argument("--shuffle", type=list_type(shuffle_type), help=f"The shuffle mode you want to use with blosc compression. Valid shuffle types: {", ".join(SHUFFLE_TYPES.keys())}")
+    parser.add_argument("--chunk-size", type=list_type(numpy_shape), help="The chunk size that tensorstore should use when writing data. i.e. --chunk-size 100x100x100. Must have the same number of dimensions as the source data.")
+    parser.add_argument("--endianness", type=list_type(endianness), help="The endianness you want to write your data as (can be big, little, or none). \"none\" is only an acceptable endianness if the dtype is 1 byte.")
     args = parser.parse_args()
 
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         data = load_input(args.source, args.shape, args.dtype)
-        trial_parameters, batch_count = TrialParameters.all_combinations(data.shape, data.dtype)
+        trial_parameters, batch_count = TrialParameters.all_combinations(data.shape, data.dtype, args.clevel, args.compressor, args.shuffle, args.chunk_size, args.endianness)
         args.dest.mkdir(parents=True, exist_ok=True)
         runner = Runner(trial_parameters, data, args.dest, args.repetitions, batch_count)
         try:
