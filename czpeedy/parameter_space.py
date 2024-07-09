@@ -26,30 +26,51 @@ class ParameterSpace:
         shape: ArrayLike,
         chunk_sizes: Iterable[ArrayLike],
         dtype: np.dtype,
-        clevels: Iterable[int] = [1, 2, 3, 5],
-        compressors: Iterable[str] = ["blosclz", "lz4", "snappy", "zlib", "zstd"],
-        shuffles: Iterable[str] = ["none", "bit", "byte"],
-        endiannesses: Iterable[str] = ["big", "little"]):
+        # Default parameters would be nice, but the user needs to be able to explicitly pass None and
+        # have the parameters still be set when needed (i.e. in ParameterSpace(..., clevels=args.clevels, ...),
+        # clevels can be explicitly None and override the default the parameter, yeilding self.clevels == None at
+        # runtime)
+        clevels: Iterable[int] | None = None,
+        compressors: Iterable[str] | None = None,
+        shuffles: Iterable[str] | None = None,
+        endiannesses: Iterable[str] | None = None):
 
-        for clevel in clevels:
-            if clevel < 0 or clevel > 9:
-                raise ValueError("clevel must range from 0 to 9")
-        
+        if len(shape) == 0 or np.prod(shape) == 0:
+            raise ValueError("shape must be non-empty")
+        for ax in shape:
+            if ax < 1:
+                raise ValueError("shape must be positive in each axis")
+
         for chunk_size in chunk_sizes:
+            if len(chunk_size) != len(shape):
+                raise ValueError("chunk and shape must have same dimensionality")
             for ax in chunk_size:
                 if ax < 1:
                     raise ValueError("chunk size must be positive in each axis")
         
+        if clevels is None or len(clevels) == 0:
+            clevels = [1, 2, 3, 5]
+        for clevel in clevels:
+            if clevel < 0 or clevel > 9:
+                raise ValueError("clevel must range from 0 to 9")
+        
+        if compressors is None or len(compressors) == 0:
+            compressors = ParameterSpace.ALL_COMPRESSORS
+        else:
+            for compressor in compressors:
+                if compressor not in ParameterSpace.ALL_COMPRESSORS:
+                    raise ValueError(f"\"{compressor}\" is not a known compressor id")
+        
+        if shuffles is None or len(shuffles) == 0:
+            shuffles = ["none", "bit", "byte"]
         for shuffle in shuffles:
             if shuffle not in ParameterSpace.SHUFFLE_TYPES:
                 raise ValueError(f"Shuffle \"{shuffle}\" is not recognized. Shuffle must be one of {", ".join(ParameterSpace.SHUFFLE_TYPES)}")
         
-        for compressor in compressors:
-            if compressor not in ParameterSpace.ALL_COMPRESSORS:
-                raise ValueError(f"\"{compressor}\" is not a known compressor id")
-        
         if dtype.itemsize == 1:
             endiannesses = ["auto"]
+        elif endiannesses is None or len(endiannesses) == 0:
+            endiannesses = ["big", "little"]
         for endianness in endiannesses:
             if endianness not in ParameterSpace.ENDIANNESSES:
                 raise ValueError(f"Endianness \"{endianness}\" is not recognized. Endianness must be one of {", ".join(ParameterSpace.ENDIANNESSES)}")
@@ -65,7 +86,6 @@ class ParameterSpace:
         self.num_combinations = len(chunk_sizes) * len(clevels) * len(compressors) * len(shuffles) * len(endiannesses)
     
     def summarize(self):
-        # print(colored(title, "green") +)
         print(colored("Parameter space", "green") + f" ({self.num_combinations} total tests)")
 
         fmt_title = lambda title: colored(f"{title:>15} ", "light_grey")
