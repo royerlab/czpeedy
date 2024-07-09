@@ -101,7 +101,6 @@ def load_input(source: Path, shape: list[int] | None = None, dtype: np.dtype | N
 # This is useful for specifying a set of parameters for each given property.
 def list_type(element_type: Callable[[str], Any]) -> set[Any]:
     def parser(text: str) -> list[Any]:
-        print({part for part in text.split(',')})
         return {element_type(part) for part in text.split(',')}
     return parser
 
