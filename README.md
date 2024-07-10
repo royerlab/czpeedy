@@ -16,6 +16,8 @@ standard deviation, and fastest settings will be reported.
 
 ## Screenshots
 ![A screenshot of the terminal output created by `czpeedy`.](images/term_screenshot.png)
+(Full log ommitted for brevity)
+![A screenshot of the result summary created by `czpeedy`.](images/term_screenshot_2.png)
 
 ## Usage
 The most basic use of `czpeedy` is a write test over the entire default test space:
