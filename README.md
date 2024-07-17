@@ -19,9 +19,16 @@ standard deviation, and fastest settings will be reported.
 (Full log ommitted for brevity)
 ![A screenshot of the result summary created by `czpeedy`.](images/term_screenshot_2.png)
 
+## Installation
+`czpeedy` can be installed via pip for end use, or managed with [`rye`](https://rye.astral.sh/) if you are developing for it. For most users,
+we reccommend running
+`pip install czpeedy`
+and then following the usage instructions below. To use rye, [install it](https://rye.astral.sh/) and then use `rye run czpeedy` instead of `czpeedy`
+in your shell.
+
 ## Usage
 The most basic use of `czpeedy` is a write test over the entire default test space:
-`python main.py /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512`
+`czpeedy /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512`
 If you're willing to wait a long time (depending on the input size and drive speeds, ~a day), this command will work fine and try a
 wide range of reasonable parameters. This is not an exhaustive search of all possible parameters - for example, the compression levels
 tested by default max out at 5. This is because write speed usually gets bottlenecked by the cpu when high compressions are used,
@@ -33,12 +40,12 @@ by separating them with commas.
 
 For example, if your drives are extremely slow and your cpu is extremely fast, you might want to try higher compression levels than
 the defaults. To try just clevel 9, you could run:
-`python main.py /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512 --clevel 9`
+`czpeedy /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512 --clevel 9`
 
 If you found that 9 was too high, you could specify a few more options and find the best performance as such:
-`python main.py /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512 --clevel 6,7,8`
+`czpeedy /path/to/input/file.raw --dest /path/to/output/directory --shape 1920x1080x512 --clevel 6,7,8`
 
-To see what other parameters you can set, invoke `python main.py --help`. As of July 2024, it outputs the following:
+To see what other parameters you can set, invoke `czpeedy --help`. As of July 2024, it outputs the following:
 ```text
 usage: main.py [-h] [--dest DEST] [--savecsv SAVECSV] [--repetitions REPETITIONS] [--dtype DTYPE] [--shape SHAPE] [--clevel CLEVEL] [--compressor COMPRESSOR] [--shuffle SHUFFLE] [--chunk-size CHUNK_SIZE] [--endianness ENDIANNESS] source
 
