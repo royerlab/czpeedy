@@ -46,7 +46,9 @@ class Runner:
         for (batch_id, trial_param) in enumerate(self.trial_params):
             result = []
             spec = trial_param.to_spec(self.dest)
-            dataset = ts.open(spec).result()
+            codecs = ts.CodecSpec(trial_param.codecs())
+
+            dataset = ts.open(spec, codec=codecs).result()
 
             if is_first_loop:
                 print(f"{colored("Warming up...", "green")} (The very first write is often 2x slower than expected, so czpeedy discards it)")
@@ -55,7 +57,7 @@ class Runner:
 
             print()
             print(f"{colored(f"Starting Test Batch {batch_id + 1}" + (f"/{self.batch_count}" if self.batch_count else ""), "green")}{f" ({100*batch_id/self.batch_count:.1f}%)" if self.batch_count else ""}")
-            print(colored(spec, "light_grey"))
+            print(colored(trial_param.summarize(), "light_grey"))
             for n in range(self.repetitions):
                 print(f"Test {n + 1}/{self.repetitions}: ".rjust(rjust_level), end="")
                 elapsed = self.time_execution(dataset)
@@ -84,12 +86,11 @@ class Runner:
         for i, (trial_param, timings) in reversed(list(enumerate(sorted_results[:topn]))):
             mean_time = np.mean(timings)
             stddev = np.std(timings)
-            spec = trial_param.to_spec(self.dest)
             
             print()
             print(colored("🥇" if i == 0 else f"#{i + 1}", "green"), end="")
             print(f": Mean Runtime: {mean_time:.2f}s " + (f"(σ={int(1000*stddev)}ms)" if self.repetitions > 1 else ""))
-            print(spec)
+            print(colored(trial_param.summarize(), attrs=["bold"]))
     
     def save_results_csv(self, path: Path):
         with open(path, "wt") as fp:

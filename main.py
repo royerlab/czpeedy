@@ -6,7 +6,6 @@ from typing import Any, Callable, Tuple
 import numpy as np
 from termcolor import colored
 
-from czpeedy.trial_parameters import TrialParameters
 from czpeedy.runner import Runner
 from czpeedy.parameter_space import ParameterSpace
 
@@ -30,7 +29,7 @@ def dir_or_file(path: str) -> Path:
 # Used to specify the input shape if needed.
 def numpy_shape(text: str) -> Tuple[int, ...]:
     axes = text.split('x')
-    out = []
+
     try:
         return tuple(int(ax) for ax in axes)
     except ValueError:
@@ -46,7 +45,7 @@ def numpy_dtype(text: str) -> np.dtype:
 def filepath(text: str) -> Path:
     try:
         return Path(text)
-    except:
+    except Exception:
         raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a filepath.")
 
 def endianness(text: str) -> int:
@@ -62,7 +61,7 @@ def clevel(text: str) -> int:
         if level < 0 or level > 9:
             raise ValueError()
         return level
-    except:
+    except Exception:
         raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a compression level. A valid compression level is an integer from 0 to 9 inclusive.")
 
 def compressor(text: str) -> str:
@@ -104,6 +103,16 @@ def list_type(element_type: Callable[[str], Any]) -> set[Any]:
         return {element_type(part) for part in text.split(',')}
     return parser
 
+def zarr_version(text: str) -> int:
+    try:
+        version = int(text)
+        if version < 2 or version > 3:
+            raise ValueError()
+        return version
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Failed to convert \"{text}\" to a zarr version. Valid zarr versions: 2, 3.")
+        
+
 # Runs the main CLI. Currently, only write testing is implemented.
 def main() -> None:
     parser = argparse.ArgumentParser()
@@ -118,15 +127,16 @@ def main() -> None:
     parser.add_argument("--shuffle", type=list_type(shuffle_type), help=f"The shuffle mode you want to use with blosc compression. Valid shuffle types: {", ".join(ParameterSpace.SHUFFLE_TYPES.keys())}")
     parser.add_argument("--chunk-size", type=list_type(numpy_shape), help="The chunk size that tensorstore should use when writing data. i.e. --chunk-size 100x100x100. Must have the same number of dimensions as the source data.")
     parser.add_argument("--endianness", type=list_type(endianness), help="The endianness you want to write your data as (can be big, little, or none). \"none\" is only an acceptable endianness if the dtype is 1 byte.")
+    parser.add_argument("--zarr-version", type=list_type(zarr_version), help="The version of zarr to use. (Supported: 2, 3.)")
     args = parser.parse_args()
 
     if args.dest:
         print(f"{colored("Beginning write testing", "green")} (from {args.source} to {args.dest})")
         data = load_input(args.source, args.shape, args.dtype)
-        if args.chunk_size == None:
+        if args.chunk_size is None:
             args.chunk_size = ParameterSpace.suggest_chunk_sizes(data.shape, data.itemsize)
         
-        parameter_space = ParameterSpace(data.shape, args.chunk_size, data.dtype, args.clevel, args.compressor, args.shuffle, args.endianness)
+        parameter_space = ParameterSpace(data.shape, args.chunk_size, data.dtype, args.zarr_version, args.clevel, args.compressor, args.shuffle, args.endianness)
         parameter_space.summarize()
         
         args.dest.mkdir(parents=True, exist_ok=True)

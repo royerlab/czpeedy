@@ -14,6 +14,7 @@ class ParameterSpace:
 
     shape: tuple[int, ...]
     dtype: np.dtype
+    zarr_versions: list[int]
     clevels: list[int]
     compressors: list[str]
     shuffles: list[str]
@@ -30,6 +31,7 @@ class ParameterSpace:
         # have the parameters still be set when needed (i.e. in ParameterSpace(..., clevels=args.clevels, ...),
         # clevels can be explicitly None and override the default the parameter, yeilding self.clevels == None at
         # runtime)
+        zarr_versions: list[int] | None = None,
         clevels: Iterable[int] | None = None,
         compressors: Iterable[str] | None = None,
         shuffles: Iterable[str] | None = None,
@@ -47,6 +49,12 @@ class ParameterSpace:
             for ax in chunk_size:
                 if ax < 1:
                     raise ValueError("chunk size must be positive in each axis")
+        
+        if zarr_versions is None or len(zarr_versions) == 0:
+            zarr_versions = [2, 3]
+        for zarr_version in zarr_versions:
+            if zarr_version < 2 or zarr_version > 3:
+                raise ValueError("zarr version must be 2 or 3")
         
         if clevels is None or len(clevels) == 0:
             clevels = [1, 2, 3, 5]
@@ -78,22 +86,26 @@ class ParameterSpace:
         self.shape = tuple(shape)
         self.chunk_sizes = [tuple(chunk_size) for chunk_size in chunk_sizes]
         self.dtype = dtype
+        self.zarr_versions = zarr_versions
         self.clevels = list(clevels)
         self.compressors = list(compressors)
         self.shuffles = list(shuffles)
         self.endiannesses = list(endiannesses)
 
-        self.num_combinations = len(chunk_sizes) * len(clevels) * len(compressors) * len(shuffles) * len(endiannesses)
+        self.num_combinations = len(zarr_versions) * len(chunk_sizes) * len(clevels) * len(compressors) * len(shuffles) * len(endiannesses)
     
     def summarize(self):
+        def fmt_title(title):
+            return colored(f"{title:>15} ", "light_grey")
+        
+        def shape_formatter(shape):
+            return "x".join(map(str, shape))
+
         print(colored("Parameter space", "green") + f" ({self.num_combinations} total tests)")
-
-        fmt_title = lambda title: colored(f"{title:>15} ", "light_grey")
-        shape_formatter = lambda shape: "x".join(map(str, shape))
-
         print(fmt_title("shape") + shape_formatter(self.shape))
         print(fmt_title("chunk sizes") + ", ".join(map(shape_formatter, self.chunk_sizes)))
         print(fmt_title("dtype") + str(self.dtype))
+        print(fmt_title("zarr versions") + ", ".join(map(str, self.zarr_versions)))
         print(fmt_title("clevels") + ", ".join(map(str, self.clevels)))
         print(fmt_title("compressors") + ", ".join(self.compressors))
         print(fmt_title("shuffles") + ", ".join(map(str, self.shuffles)))
@@ -111,11 +123,12 @@ class ParameterSpace:
     # compression level 9 is not tested as it very likely bottlenecks data at the cpu.
     # Raises ValueError if any parameters are out of bounds.
     def all_combinations(self) -> tuple[Iterator[TrialParameters], int]:
-        def to_trial_parameters(clevel: int, compressor: str, shuffle: int, chunk_size: ArrayLike, endianness: int) -> TrialParameters:
+        def to_trial_parameters(zarr_version: int, clevel: int, compressor: str, shuffle: int, chunk_size: ArrayLike, endianness: int) -> TrialParameters:
             return TrialParameters(
                 self.shape,
                 chunk_size,
                 self.dtype,
+                zarr_version=zarr_version,
                 clevel=clevel,
                 compressor=compressor,
                 shuffle=shuffle,
@@ -124,6 +137,7 @@ class ParameterSpace:
         return map(
             lambda args: to_trial_parameters(*args),
             product(
+                self.zarr_versions,
                 self.clevels,
                 self.compressors,
                 [ParameterSpace.SHUFFLE_TYPES[shuffle] for shuffle in self.shuffles],
