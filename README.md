@@ -61,6 +61,8 @@ options:
                         The chunk size that tensorstore should use when writing data. i.e. --chunk-size 100x100x100. Must have the same number of dimensions as the source data.
   --endianness ENDIANNESS
                         The endianness you want to write your data as (can be big, little, or none). "none" is only an acceptable endianness if the dtype is 1 byte.
+  --zarr-version ZARR_VERSION
+                        The version of zarr to use. (Supported: 2, 3.)
 ```
 
 ### Shape & Chunk Sizes
