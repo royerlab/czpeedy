@@ -1,3 +1,13 @@
-**/.DS_Store
+# python generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# venv
 .venv
-**/__pycache__
+
+# macos barfzone
+**/.DS_Store

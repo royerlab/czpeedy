@@ -156,5 +156,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-else:
-    print("main.py is intended to be used as a command line tool. Import czpeedy/czpeedy.py to use this as a library.")

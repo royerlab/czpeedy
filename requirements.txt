@@ -1,4 +1,0 @@
-ml-dtypes==0.4.0
-numpy==2.0.0
-tensorstore==0.1.63
-termcolor==2.4.0
