@@ -155,7 +155,9 @@ class TrialParameters:
                         "name": "blosc",
                         "configuration": {
                             "cname": self.compressor,
-                            "shuffle": ("noshuffle", "shuffle", "bitshuffle")[self.shuffle],
+                            "shuffle": ("noshuffle", "shuffle", "bitshuffle")[
+                                self.shuffle
+                            ],
                             "clevel": self.clevel,
                         },
                     },

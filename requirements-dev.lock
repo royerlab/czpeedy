@@ -16,7 +16,7 @@ numpy==2.0.0
     # via czpeedy
     # via ml-dtypes
     # via tensorstore
-pyyaml==6.0.1
+ruff==0.5.3
     # via czpeedy
 tensorstore==0.1.63
     # via czpeedy

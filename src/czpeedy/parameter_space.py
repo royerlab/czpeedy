@@ -7,6 +7,7 @@ from termcolor import colored
 
 from .trial_parameters import TrialParameters
 
+
 class ParameterSpace:
     ALL_COMPRESSORS = ["blosclz", "lz4", "lz4hc", "snappy", "zlib", "zstd"]
     SHUFFLE_TYPES = {"auto": -1, "none": 0, "byte": 1, "bit": 2}
@@ -35,8 +36,8 @@ class ParameterSpace:
         clevels: Iterable[int] | None = None,
         compressors: Iterable[str] | None = None,
         shuffles: Iterable[str] | None = None,
-        endiannesses: Iterable[str] | None = None):
-
+        endiannesses: Iterable[str] | None = None,
+    ):
         if len(shape) == 0 or np.prod(shape) == 0:
             raise ValueError("shape must be non-empty")
         for ax in shape:
@@ -49,40 +50,44 @@ class ParameterSpace:
             for ax in chunk_size:
                 if ax < 1:
                     raise ValueError("chunk size must be positive in each axis")
-        
+
         if zarr_versions is None or len(zarr_versions) == 0:
             zarr_versions = [2, 3]
         for zarr_version in zarr_versions:
             if zarr_version < 2 or zarr_version > 3:
                 raise ValueError("zarr version must be 2 or 3")
-        
+
         if clevels is None or len(clevels) == 0:
             clevels = [1, 2, 3, 5]
         for clevel in clevels:
             if clevel < 0 or clevel > 9:
                 raise ValueError("clevel must range from 0 to 9")
-        
+
         if compressors is None or len(compressors) == 0:
             compressors = ParameterSpace.ALL_COMPRESSORS
         else:
             for compressor in compressors:
                 if compressor not in ParameterSpace.ALL_COMPRESSORS:
-                    raise ValueError(f"\"{compressor}\" is not a known compressor id")
-        
+                    raise ValueError(f'"{compressor}" is not a known compressor id')
+
         if shuffles is None or len(shuffles) == 0:
             shuffles = ["none", "bit", "byte"]
         for shuffle in shuffles:
             if shuffle not in ParameterSpace.SHUFFLE_TYPES:
-                raise ValueError(f"Shuffle \"{shuffle}\" is not recognized. Shuffle must be one of {", ".join(ParameterSpace.SHUFFLE_TYPES)}")
-        
+                raise ValueError(
+                    f"Shuffle \"{shuffle}\" is not recognized. Shuffle must be one of {", ".join(ParameterSpace.SHUFFLE_TYPES)}"
+                )
+
         if dtype.itemsize == 1:
             endiannesses = ["auto"]
         elif endiannesses is None or len(endiannesses) == 0:
             endiannesses = ["big", "little"]
         for endianness in endiannesses:
             if endianness not in ParameterSpace.ENDIANNESSES:
-                raise ValueError(f"Endianness \"{endianness}\" is not recognized. Endianness must be one of {", ".join(ParameterSpace.ENDIANNESSES)}")
-        
+                raise ValueError(
+                    f"Endianness \"{endianness}\" is not recognized. Endianness must be one of {", ".join(ParameterSpace.ENDIANNESSES)}"
+                )
+
         self.shape = tuple(shape)
         self.chunk_sizes = [tuple(chunk_size) for chunk_size in chunk_sizes]
         self.dtype = dtype
@@ -92,18 +97,30 @@ class ParameterSpace:
         self.shuffles = list(shuffles)
         self.endiannesses = list(endiannesses)
 
-        self.num_combinations = len(zarr_versions) * len(chunk_sizes) * len(clevels) * len(compressors) * len(shuffles) * len(endiannesses)
-    
+        self.num_combinations = (
+            len(zarr_versions)
+            * len(chunk_sizes)
+            * len(clevels)
+            * len(compressors)
+            * len(shuffles)
+            * len(endiannesses)
+        )
+
     def summarize(self):
         def fmt_title(title):
             return colored(f"{title:>15} ", "light_grey")
-        
+
         def shape_formatter(shape):
             return "x".join(map(str, shape))
 
-        print(colored("Parameter space", "green") + f" ({self.num_combinations} total tests)")
+        print(
+            colored("Parameter space", "green")
+            + f" ({self.num_combinations} total tests)"
+        )
         print(fmt_title("shape") + shape_formatter(self.shape))
-        print(fmt_title("chunk sizes") + ", ".join(map(shape_formatter, self.chunk_sizes)))
+        print(
+            fmt_title("chunk sizes") + ", ".join(map(shape_formatter, self.chunk_sizes))
+        )
         print(fmt_title("dtype") + str(self.dtype))
         print(fmt_title("zarr versions") + ", ".join(map(str, self.zarr_versions)))
         print(fmt_title("clevels") + ", ".join(map(str, self.clevels)))
@@ -111,7 +128,6 @@ class ParameterSpace:
         print(fmt_title("shuffles") + ", ".join(map(str, self.shuffles)))
         print(fmt_title("endiannesses") + ", ".join(map(str, self.endiannesses)))
         print(fmt_title("test count") + str(self.num_combinations))
-
 
     # Returns:
     # 1. An iterator that steps over every possible set of trial parameters given allowable values for
@@ -123,7 +139,14 @@ class ParameterSpace:
     # compression level 9 is not tested as it very likely bottlenecks data at the cpu.
     # Raises ValueError if any parameters are out of bounds.
     def all_combinations(self) -> tuple[Iterator[TrialParameters], int]:
-        def to_trial_parameters(zarr_version: int, clevel: int, compressor: str, shuffle: int, chunk_size: ArrayLike, endianness: int) -> TrialParameters:
+        def to_trial_parameters(
+            zarr_version: int,
+            clevel: int,
+            compressor: str,
+            shuffle: int,
+            chunk_size: ArrayLike,
+            endianness: int,
+        ) -> TrialParameters:
             return TrialParameters(
                 self.shape,
                 chunk_size,
@@ -132,8 +155,9 @@ class ParameterSpace:
                 clevel=clevel,
                 compressor=compressor,
                 shuffle=shuffle,
-                endianness=endianness)
-        
+                endianness=endianness,
+            )
+
         return map(
             lambda args: to_trial_parameters(*args),
             product(
@@ -142,16 +166,27 @@ class ParameterSpace:
                 self.compressors,
                 [ParameterSpace.SHUFFLE_TYPES[shuffle] for shuffle in self.shuffles],
                 self.chunk_sizes,
-                [ParameterSpace.ENDIANNESSES[endianness] for endianness in self.endiannesses]))
-    
-    def suggest_chunk_sizes(shape: ArrayLike, itemsize: int, max_bytes = 2**31 - 17, size_ratio = 1.5, volume_ratio = 1.5) -> list[list[int]]:
+                [
+                    ParameterSpace.ENDIANNESSES[endianness]
+                    for endianness in self.endiannesses
+                ],
+            ),
+        )
+
+    def suggest_chunk_sizes(
+        shape: ArrayLike,
+        itemsize: int,
+        max_bytes=2**31 - 17,
+        size_ratio=1.5,
+        volume_ratio=1.5,
+    ) -> list[list[int]]:
         # Concept: The smallest size we reasonably want along an axis is min(axis_size, 100) - 100 is small,
         # so we use 100 as minimum unless axis_size is even smaller.
         # Figure out an integer n such that 100 ~= axis_size / n. Then compute the sequence
         # axis_size / x for x in range (1, n). This forms a sequence of not-absurd chunk sizes along
         # this axis - the smallest will be around 100, the largest will be the full shape of the array,
         # and the spacing ensures that there won't be any crazy wasted space (i.e. if the axis is size 100
-        # and the chunk is size 99, you need two chunks of size 99 to cover it. huge waste. But this 
+        # and the chunk is size 99, you need two chunks of size 99 to cover it. huge waste. But this
         # method ensures the axis size is always quite close to (i.e. just beneath) a multiple of the chunk).
         # (Note: in the implementation below we don't use all of the quotients - just ones that are sufficiently
         # spaced. i.e. not all x in [1, n] are used if their recipocals are close)
@@ -167,9 +202,9 @@ class ParameterSpace:
         # size is the best without testing thousands of chunk sizes that have very similar volumes.
         def break_axis(axis: int) -> list[int]:
             if axis < 100:
-                return [axis]            
+                return [axis]
             else:
-                largest_divisor = int(axis / 100) # => axis ~= 100 * largest_divisor
+                largest_divisor = int(axis / 100)  # => axis ~= 100 * largest_divisor
                 chunk_lengths = []
                 n = largest_divisor
                 while n >= 1:
@@ -194,20 +229,20 @@ class ParameterSpace:
                     n = int(n / size_ratio)
 
                 return chunk_lengths
-        
+
         chunks = list(product(*[break_axis(axis) for axis in shape]))
         chunks_with_volumes = map(lambda chunk: (chunk, np.prod(chunk)), chunks)
         chunks_with_volumes = sorted(chunks_with_volumes, key=lambda item: item[1])
-        
+
         smallest_chunk, volume_to_beat = chunks_with_volumes[0]
         suggested_chunks = [smallest_chunk]
         volume_to_beat *= volume_ratio
-        
+
         for chunk, volume in chunks_with_volumes:
             if volume > volume_to_beat:
                 suggested_chunks.append(chunk)
                 volume_to_beat = volume * volume_ratio
-        
+
         # We always want to suggest using the minimum and maximum chunk sizes, as those
         # are the extremes of the sequential write performance spectrum.
         shape = list(shape)
@@ -215,15 +250,17 @@ class ParameterSpace:
             suggested_chunks.append(shape)
 
         max_volume = int(max_bytes / itemsize)
-        suggested_chunks = list(filter(lambda chunk: np.prod(chunk) < max_volume, suggested_chunks))
-        
+        suggested_chunks = list(
+            filter(lambda chunk: np.prod(chunk) < max_volume, suggested_chunks)
+        )
+
         # Test to see the % of wasted space that the suggested chunks create. In my testing
         # this is always less than 2% of the size of the data
         # def waste(shape, chunk):
         #     grid_size = np.uint32(np.array(shape) / np.array(chunk)) * np.array(chunk)
         #     grid_size += (np.array(shape) > grid_size) * np.array(chunk)
         #     return np.prod(grid_size) - np.prod(shape)
-        
+
         # for chunk in suggested_chunks:
         #     print(100 % waste(shape, chunk) / np.prod(shape))
 
