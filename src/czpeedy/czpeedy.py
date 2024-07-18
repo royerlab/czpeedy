@@ -145,8 +145,9 @@ def main() -> None:
             runner.run_all()
         except KeyboardInterrupt:
             print(colored("\nCtrl-C detected mid-test - Printing partial results and terminating.", "black", "on_red"))
+        
+        print()
         print(colored("Fastest Specs:", "green"))
-
         runner.print_results()
         if args.savecsv:
             print(f"{colored("Saving results", "green")} as {args.savecsv}")

@@ -166,6 +166,7 @@ class TrialParameters:
     # A human-readable summary of the trial parameters.
     def summarize(self) -> str:
         endianness = ("auto", "big", "little")[self.endianness]
+        shuffle = ("none", "byte", "bit")[self.shuffle]
         shape = "x".join(map(str, self.shape))
         chunk_size = "x".join(map(str, self.chunk_size))
-        return f"shape: {shape}, chunk size: {chunk_size}, dtype: {self.dtype}, zarr version: {self.zarr_version}, clevel: {self.clevel}, compressor: {self.compressor}, shuffle: {self.shuffle}, endianness: {endianness}"
+        return f"shape: {shape}, chunk size: {chunk_size}, dtype: {self.dtype}, zarr version: {self.zarr_version}, clevel: {self.clevel}, compressor: {self.compressor}, shuffle: {shuffle}, endianness: {endianness}"

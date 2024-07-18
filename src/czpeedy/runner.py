@@ -87,10 +87,10 @@ class Runner:
             mean_time = np.mean(timings)
             stddev = np.std(timings)
             
-            print()
             print(colored("🥇" if i == 0 else f"#{i + 1}", "green"), end="")
             print(f": Mean Runtime: {mean_time:.2f}s " + (f"(σ={int(1000*stddev)}ms)" if self.repetitions > 1 else ""))
             print(colored(trial_param.summarize(), attrs=["bold"]))
+            print()
     
     def save_results_csv(self, path: Path):
         with open(path, "wt") as fp:
