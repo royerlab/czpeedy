@@ -11,6 +11,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - uses: sksat/setup-rye@v0.25.0
+
     - name: Set up Python
       uses: actions/setup-python@v2
       with:

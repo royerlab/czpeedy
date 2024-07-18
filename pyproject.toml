@@ -8,8 +8,7 @@ authors = [
 dependencies = [
     "numpy>=2.0.0",
     "termcolor>=2.4.0",
-    "tensorstore>=0.1.63",
-    "pyyaml>=6.0.1",
+    "tensorstore>=0.1.63"
 ]
 readme = "README.md"
 requires-python = ">= 3.12"
