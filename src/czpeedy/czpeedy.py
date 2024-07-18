@@ -210,6 +210,11 @@ def main() -> None:
         type=list_type(zarr_version),
         help="The version of zarr to use. (Supported: 2, 3.)",
     )
+    parser.add_argument(
+        "--fullxy",
+        action='store_true',
+        help="If specified, the chunk size will be the full x and y dimensions of the data. Useful if you plan to stream xy slices over the network.",
+    )
     args = parser.parse_args()
 
     if args.dest:
@@ -219,7 +224,7 @@ def main() -> None:
         data = load_input(args.source, args.shape, args.dtype)
         if args.chunk_size is None:
             args.chunk_size = ParameterSpace.suggest_chunk_sizes(
-                data.shape, data.itemsize
+                data.shape, data.itemsize, args.fullxy
             )
 
         parameter_space = ParameterSpace(

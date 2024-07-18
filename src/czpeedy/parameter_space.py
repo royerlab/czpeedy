@@ -176,10 +176,22 @@ class ParameterSpace:
     def suggest_chunk_sizes(
         shape: ArrayLike,
         itemsize: int,
-        max_bytes=2**31 - 17,
-        size_ratio=1.5,
-        volume_ratio=1.5,
+        full_xy: bool = False,
+        max_bytes: int = 2**31 - 17,
+        size_ratio: float | None = None,
+        volume_ratio: float | None = None,
     ) -> list[list[int]]:
+        
+        # This is just heuristic - for full xy frames, we have fewer variables to play with (usually just the z
+        # axis chunk length). So, to give the user several chunk options, we make the geometric sequence a bit
+        # tighter.
+        if full_xy:
+            size_ratio = size_ratio or 1.25
+            volume_ratio = volume_ratio or 1.25
+        else:
+            size_ratio = size_ratio or 1.5
+            volume_ratio = volume_ratio or 1.5
+
         # Concept: The smallest size we reasonably want along an axis is min(axis_size, 100) - 100 is small,
         # so we use 100 as minimum unless axis_size is even smaller.
         # Figure out an integer n such that 100 ~= axis_size / n. Then compute the sequence
@@ -230,7 +242,11 @@ class ParameterSpace:
 
                 return chunk_lengths
 
-        chunks = list(product(*[break_axis(axis) for axis in shape]))
+        if full_xy:
+            chunks = list(product(*[break_axis(axis) for axis in shape[:-2]], [shape[-2]], [shape[-1]]))
+        else:
+            chunks = list(product(*[break_axis(axis) for axis in shape]))
+        
         chunks_with_volumes = map(lambda chunk: (chunk, np.prod(chunk)), chunks)
         chunks_with_volumes = sorted(chunks_with_volumes, key=lambda item: item[1])
 
@@ -262,6 +278,5 @@ class ParameterSpace:
         #     return np.prod(grid_size) - np.prod(shape)
 
         # for chunk in suggested_chunks:
-        #     print(100 % waste(shape, chunk) / np.prod(shape))
-
+        #     print(100 % waste(shape, chunk) / np.prod(shape)))
         return suggested_chunks
