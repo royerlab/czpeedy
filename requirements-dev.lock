@@ -16,6 +16,8 @@ numpy==2.0.0
     # via czpeedy
     # via ml-dtypes
     # via tensorstore
+pyyaml==6.0.1
+    # via czpeedy
 tensorstore==0.1.63
     # via czpeedy
 termcolor==2.4.0
