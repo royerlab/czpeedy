@@ -119,6 +119,7 @@ class Runner:
                     "mean write time (s)",
                     "write std.dev (s)",
                     "dtype",
+                    "zarr version",
                     "clevel",
                     "compressor",
                     "shuffle",
@@ -133,7 +134,8 @@ class Runner:
                     [
                         f"{np.mean(timings):.2f}",
                         f"{np.std(timings):.2f}",
-                        trial_param.dtype_json(),
+                        trial_param.dtype_json_v2() if trial_param.zarr_version == 2 else trial_param.dtype_json_v3(),
+                        trial_param.zarr_version,
                         trial_param.clevel,
                         trial_param.compressor,
                         trial_param.shuffle,
