@@ -230,6 +230,7 @@ def main() -> None:
         parameter_space = ParameterSpace(
             data.shape,
             args.chunk_size,
+            args.dest,
             data.dtype,
             args.zarr_version,
             args.clevel,
@@ -243,7 +244,6 @@ def main() -> None:
         runner = Runner(
             parameter_space.all_combinations(),
             data,
-            args.dest,
             args.repetitions,
             parameter_space.num_combinations,
         )

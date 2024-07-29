@@ -15,7 +15,6 @@ from .trial_parameters import TrialParameters
 class Runner:
     trial_params: Iterable[TrialParameters]
     data: np.ndarray
-    dest: Path
     repetitions: int
     batch_count: int
     results: dict[TrialParameters, list[float]]
@@ -24,13 +23,11 @@ class Runner:
         self,
         trial_params: Iterable[TrialParameters],
         data: np.ndarray,
-        dest: Path,
         repetitions: int,
         batch_count: int | None = None,
     ):
         self.trial_params = trial_params
         self.data = data
-        self.dest = dest
         self.repetitions = repetitions
         self.batch_count = batch_count
         self.results = {}
@@ -53,7 +50,7 @@ class Runner:
 
         for batch_id, trial_param in enumerate(self.trial_params):
             result = []
-            spec = trial_param.to_spec(self.dest)
+            spec = trial_param.to_spec()
             codecs = ts.CodecSpec(trial_param.codecs())
 
             dataset = ts.open(spec, codec=codecs).result()

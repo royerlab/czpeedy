@@ -1,5 +1,6 @@
 from typing import Iterable, Iterator
 from itertools import product
+from pathlib import Path
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -15,6 +16,7 @@ class ParameterSpace:
 
     shape: tuple[int, ...]
     dtype: np.dtype
+    dest: Path
     zarr_versions: list[int]
     clevels: list[int]
     compressors: list[str]
@@ -27,6 +29,7 @@ class ParameterSpace:
         self,
         shape: ArrayLike,
         chunk_sizes: Iterable[ArrayLike],
+        dest: Path,
         dtype: np.dtype,
         # Default parameters would be nice, but the user needs to be able to explicitly pass None and
         # have the parameters still be set when needed (i.e. in ParameterSpace(..., clevels=args.clevels, ...),
@@ -90,6 +93,7 @@ class ParameterSpace:
 
         self.shape = tuple(shape)
         self.chunk_sizes = [tuple(chunk_size) for chunk_size in chunk_sizes]
+        self.dest = dest
         self.dtype = dtype
         self.zarr_versions = zarr_versions
         self.clevels = list(clevels)
@@ -150,6 +154,7 @@ class ParameterSpace:
             return TrialParameters(
                 self.shape,
                 chunk_size,
+                self.dest,
                 self.dtype,
                 zarr_version=zarr_version,
                 clevel=clevel,

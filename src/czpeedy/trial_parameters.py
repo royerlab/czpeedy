@@ -15,6 +15,7 @@ class TrialParameters:
     compressor: str
     shuffle: int
     endianness: int
+    output_path: Path
 
     # All parameters are either obvious or can be referenced in tensorstore's spec documentation, with the exception of `endianness`.
     # `endianness` is -1 for little endian, 0 for indeterminate endianness (only applies for 1 byte values), and +1 for big endian.
@@ -22,6 +23,7 @@ class TrialParameters:
         self,
         shape: ArrayLike[int],
         chunk_size: ArrayLike,
+        output_path: Path,
         dtype: np.dtype,
         zarr_version: int,
         clevel: int,
@@ -31,6 +33,7 @@ class TrialParameters:
     ):
         self.shape = shape
         self.chunk_size = list(chunk_size)
+        self.output_path = output_path
         self.dtype = dtype
         self.zarr_version = zarr_version
         self.clevel = clevel
@@ -55,13 +58,13 @@ class TrialParameters:
 
     # Produces a jsonable dict that communicates all the trial parameters to tensorstore.
     # Usage: `ts.open(trial_parameters.to_spec()).result()`
-    def to_spec(self, output_path: Path) -> dict:
+    def to_spec(self) -> dict:
         if self.zarr_version == 2:
             return {
                 "driver": "zarr",
                 "kvstore": {
                     "driver": "file",
-                    "path": str(output_path.absolute()),
+                    "path": str(self.output_path.absolute()),
                 },
                 "metadata": {
                     "compressor": {
@@ -119,7 +122,7 @@ class TrialParameters:
                 "driver": "zarr3",
                 "kvstore": {
                     "driver": "file",
-                    "path": str(output_path.absolute()),
+                    "path": str(self.output_path.absolute()),
                 },
                 "metadata": {
                     "shape": self.shape,
