@@ -138,7 +138,7 @@ class Runner:
                         trial_param.shuffle,
                         ",".join(str(ax) for ax in trial_param.chunk_size),
                         trial_param.endianness,
-                        trial_param.to_spec(self.dest),
+                        trial_param.to_spec(),
                         trial_param.codecs(),
                     ]
                 )
