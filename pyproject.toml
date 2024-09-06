@@ -1,6 +1,6 @@
 [project]
 name = "czpeedy"
-version = "0.2.2"
+version = "0.2.3"
 description = "A command-line tool used to determine the tensorstore settings which yield the fastest write speed on a given machine."
 authors = [
     { name = "Seth Hinz", email = "sethhinz@me.com" }
