@@ -5,7 +5,9 @@ from typing import Any, Callable, Tuple
 
 import numpy as np
 from termcolor import colored
+import tensorstore as ts
 
+from czpeedy.zarr_util import identify_zarr_format
 from czpeedy.runner import Runner
 from czpeedy.parameter_space import ParameterSpace
 
@@ -97,13 +99,11 @@ def shuffle_type(text: str) -> str:
         f"\"{text}\" is not a valid shuffle type. Valid shuffle types: {", ".join(shuffles.keys())}"
     )
 
-
 # Takes all the information that the user provided about the input source and attempts to load it into a numpy array.
-# Currently, only raw numpy data files are supported.
 def load_input(
     source: Path, shape: list[int] | None = None, dtype: np.dtype | None = None
 ) -> np.ndarray:
-    if source.is_file:
+    if source.is_file():
         # Raw numpy data dump (or known type):
         print(f"{colored("Reading input file", "green")} as raw numpy dump")
         if shape is None:
@@ -117,7 +117,18 @@ def load_input(
         with open(source, "rb") as f:
             return np.fromfile(f, dtype=dtype).reshape(shape)
     else:
-        raise NotImplementedError("Loading from zarr is not yet supported.")
+        version = identify_zarr_format(source)
+        if version is None:
+            raise ValueError(
+                f"Could not identify the zarr version of the input dataset at {source}. The archive is either unsupported or invalid."
+            )
+        
+        dataset = ts.open({
+            "driver": "zarr" if version == 2 else "zarr_v3",
+            "kvstore": {"driver": "file", "path": str(source.absolute())},
+        }).result()
+
+        return dataset.read().result()
 
 
 # Given a callable that can be used as a type in argparse (i.e. it can convert a string to a more specific type),
