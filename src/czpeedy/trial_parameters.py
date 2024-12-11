@@ -42,13 +42,8 @@ class TrialParameters:
         self.shuffle = shuffle
         self.endianness = endianness
 
-    # The name actually varies
-    # depending on the driver (i.e. zarr vs zarr3 vs N5...) and endianneess. Currently
-    # only supports zarr, but in the future we should support more.
-
     # Returns a zarr v2 dtype string based on the numpy data type of this `TrialParameters`.
     # Refernce: https://zarr-specs.readthedocs.io/en/latest/v2/v2.0.html#data-type-encoding
-    # TODO: This only supports uint16 right now!
     def dtype_json_v2(self) -> Union[list, str]:
         # Helper function to parse a regular (not structured) dtype into a zarr v2 dtype string.
         def field_dtype(dtype: np.dtype) -> str:
@@ -99,7 +94,6 @@ class TrialParameters:
 
         return dtype_str(self.dtype)
 
-    # TODO: This only supports uint16 right now!
     def dtype_json_v3(self) -> str:
         if self.dtype.kind == 'V':
             return f'r{self.dtype.itemsize * 8}'
